@@ -1,0 +1,66 @@
+Key Features:
+1. Document Parsing 📄
+
+Parses Word documents (.docx) and extracts sections with headings
+Maintains document structure and hierarchy
+Counts words per section
+
+2. Template Structure & Validation Rules ⚙️
+
+Pre-defined template with required sections (Executive Summary, Introduction, Methodology, Results, Discussion, Conclusion)
+Configurable validation rules for:
+
+Structural checks: Required sections presence
+Content checks: Minimum word counts
+Keyword checks: Required terms in specific sections
+
+
+
+3. Rule Engine 🔍
+
+Validates documents against multiple rule types
+Categorizes issues by severity (Critical, Warning, Suggestion)
+Provides detailed feedback messages
+
+4. LLM Integration 🤖
+
+Optional Google Gemini API integration
+Section quality analysis
+Document coherence checking
+Intelligent content assessment
+
+5. User Interface 💻
+
+Clean Streamlit interface
+File upload functionality
+Real-time validation results
+Visual metrics and progress indicators
+Expandable sections for detailed information
+
+6. Reporting 📊
+
+Generates detailed validation reports
+Downloadable text reports
+Summary statistics and pass rates
+
+To run this program:
+
+Install required packages:
+
+bashpip install streamlit python-docx google-generativeai
+
+Run the application:
+
+bashstreamlit run your_script_name.py
+
+Optional: Get a Google Gemini API key from Google AI Studio for advanced LLM analysis features.
+
+How to use:
+
+Upload a Word document (.docx file)
+Optionally enter your Gemini API key for AI-powered analysis
+View validation results with critical issues, warnings, and passed checks
+Get AI analysis of section quality and document coherence (if API key provided)
+Download a detailed report of all findings
+
+The program is modular and extensible - you can easily add new validation rules, modify the template structure, or integrate additional LLM providers. The code follows the step-by-step approach outlined in your document, implementing all three phases: Template Understanding, Agent Development, and Testing/Refinement.
