@@ -64,3 +64,35 @@ Get AI analysis of section quality and document coherence (if API key provided)
 Download a detailed report of all findings
 
 The program is modular and extensible - you can easily add new validation rules, modify the template structure, or integrate additional LLM providers. The code follows the step-by-step approach outlined in your document, implementing all three phases: Template Understanding, Agent Development, and Testing/Refinement.
+
+
+
+--------------****************
+
+
+Key Changes and Comments:
+ * LLM Availability Check: The code now checks if google-generativeai is installed.
+ * Session State for LLM Config: API key, model name, and enable flag are stored in st.session_state for persistence.
+ * Global LLM Instance: llm_model_global_instance is initialized once if the API key is valid and LLM is enabled. This instance is then passed to the validation function.
+ * Template Analysis for Sections: analyze_document_structure now has an is_template flag. If true, it tries to extract sections based on a user-configurable heading style (default "Heading 1") and the subsequent paragraph(s) as descriptions.
+ * template_section_heading_style: Added a Streamlit input in the sidebar for the user to specify the style name that denotes section headings in their template. This is crucial for correctly identifying sections for LLM analysis.
+ * extract_user_section_content: This function extracts content under a given section title from the user's document, stopping at the next heading of a similar or higher level (based on template_section_heading_style).
+ * get_llm_content_relevance:
+   * This function is now cached using @st.cache_data to avoid repeated API calls for the same inputs, saving time and cost. A llm_model_name_for_cache_key argument is added to ensure the cache invalidates if the model changes.
+   * It constructs a detailed prompt for the LLM.
+   * It makes the API call to Gemini.
+   * It includes robust parsing for the expected JSON output and error handling.
+   * Important: The actual LLM call is made here. The "SIMULATED LLM RESPONSE" block in the previous thought process has been replaced with the actual _llm_model_instance.generate_content(prompt) call.
+ * validate_document_against_template:
+   * It now takes llm_model_instance_for_validation as an argument.
+   * If LLM validation is enabled and the model is available, it iterates through sections_with_descriptions from the template.
+   * It calls extract_user_section_content and then get_llm_content_relevance.
+   * LLM feedback (score, explanation, errors) is added to the feedback list.
+ * Storing raw_bytes: When a user document is uploaded, its user_bytes_data is stored in user_doc_analysis["raw_bytes"]. This allows the extract_user_section_content function to re-open the document using io.BytesIO(user_doc_analysis["raw_bytes"]) because python-docx consumes the initial BytesIO stream.
+ * UI Enhancements:
+   * Sidebar options for LLM API key, model selection, and enabling the feature.
+   * Display of identified section titles and their descriptions from the template.
+   * Clearer display of LLM feedback with emojis and indentation.
+   * Button to clear LLM cache.
+ * Error Handling & User Guidance: More messages to guide the user, especially regarding LLM setup and potential issues with section extraction.
+This version is significantly more feature-rich. Remember to replace "YOUR_API_KEY" implicitly by entering it into the Streamlit UI. Test thoroughly with your specific template structure and user documents. The section/description extraction heuristic might need adjustments based on how your templates are designed.
