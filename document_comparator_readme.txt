@@ -352,3 +352,64 @@ How to Run the Application
 Your web browser will open with the Streamlit application running. You can then enter your API key, upload your documents, and see the AI-generated feedback.
 
             streamlit run app.py
+
+
+
+
+
+
+-----********************
+
+Of course. Here is a Mermaid flowchart that visually represents the end-to-end code for the document comparison tool.
+This flowchart outlines the process from user interaction in the Streamlit UI to the backend processing, analysis by the LLM, and final display of the results.
+graph TD
+    subgraph "1. User Interface (app.py)"
+        A(Start) --> B{"User provides API Key, Template DOCX, and Comparison DOCX"};
+        B --> C[Clicks 'Compare Documents'];
+        C --> D{Inputs Valid?};
+        D -- No --> E[Show Error Message];
+        D -- Yes --> F[Show 'Analyzing...' Spinner];
+    end
+
+    subgraph "2. Backend Processing (document_comparator.py)"
+        F --> G[Parse Template DOCX to get 'template_sections'];
+        F --> H[Parse Comparison DOCX to get 'compare_sections'];
+        
+        H --> I[Initialize Embedding Model (all-MiniLM-L6-v2)];
+        I --& H --> J[Create FAISS Vector Store from 'compare_sections'];
+        
+        G --& J --> K[Initialize LLM (OpenAI)];
+        
+        subgraph "Loop for each Template Section"
+            K --> L[Start Loop];
+            L --> M["Similarity Search: Find content in Vector Store relevant to the template section"];
+            M --> N["Format Prompt: Combine template section, its content, and the retrieved document content"];
+            N --> O["Query LLM for Analysis"];
+            O --> P["Receive Feedback: Presence, Relevance Score, and Textual Analysis"];
+            P --> Q[Append structured feedback to the final report];
+            Q --> R{All sections processed?};
+            R -- No --> M;
+        end
+
+        R -- Yes --> S[Return Final Feedback Report];
+    end
+
+    subgraph "3. Display Results (app.py)"
+        S --> T[Render the complete report in the Streamlit UI using expanders];
+        T --> U(End);
+    end
+
+
+How the Flowchart Works:
+ * User Interface: The process begins in the Streamlit UI (app.py). The user provides all necessary inputs and clicks the compare button. The application validates these inputs before proceeding.
+ * Backend Processing:
+   * The core logic in document_comparator.py takes over.
+   * Both the template and the comparison documents are parsed to extract their structure based on headings.
+   * A vector store (a numerical representation) is created from the content of the document being compared. This allows for efficient searching.
+   * The application then iterates through each section defined in the template document.
+ * Comparison Loop:
+   * For every section in the template, the system searches the vector store to find the most similar or relevant content in the second document.
+   * This retrieved content, along with the original template section's description, is sent to the Large Language Model (LLM) with a specific prompt.
+   * The LLM analyzes the information and provides a structured feedback, including whether the section was found, a relevance score, and qualitative notes.
+   * This feedback is collected for all sections.
+ * Display Results: Once the analysis is complete for all sections, the final report is passed back to the Streamlit UI, which then displays it to the user in a clean, organized format.
