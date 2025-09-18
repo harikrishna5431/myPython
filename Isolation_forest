@@ -1,0 +1,48 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.ensemble import IsolationForest
+from sklearn.preprocessing import OneHotEncoder
+
+# Sample Customer_Master data
+data = pd.DataFrame({
+    "Customer_ID": ["C001", "C002", "C003", "C004", "C005"],
+    "Age": [35, 42, 29, 500, 37],
+    "Income": [55000, 72000, 48000, 60000, -1000],
+    "Region": ["East", "West", "North", "South", "East"],
+    "Num_Accounts": [2, 3, 1, 2, 1]
+})
+
+# Encode categorical features (Region)
+enc = OneHotEncoder(sparse_output=False)
+region_encoded = enc.fit_transform(data[["Region"]])
+region_df = pd.DataFrame(region_encoded, columns=enc.get_feature_names_out(["Region"]))
+
+# Final feature set
+X = pd.concat([data[["Age", "Income", "Num_Accounts"]], region_df], axis=1)
+
+# Train Isolation Forest
+iso = IsolationForest(contamination=0.2, random_state=42)
+iso.fit(X)
+
+# Predictions
+data["Anomaly"] = iso.predict(X)
+
+# --- Visualization ---
+plt.figure(figsize=(8,6))
+
+# Normal points
+normal = data[data["Anomaly"] == 1]
+plt.scatter(normal["Age"], normal["Income"], 
+            c="blue", label="Normal", s=80, alpha=0.7)
+
+# Anomalies
+anomalies = data[data["Anomaly"] == -1]
+plt.scatter(anomalies["Age"], anomalies["Income"], 
+            c="red", label="Anomaly", s=120, edgecolors="black")
+
+plt.title("Customer_Master - Data Quality Anomalies (Isolation Forest)")
+plt.xlabel("Age")
+plt.ylabel("Income")
+plt.legend()
+plt.grid(True)
+plt.show()
