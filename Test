@@ -1,0 +1,889 @@
+Great 🚀 — here’s a master system prompt you can paste into GitHub Copilot Agent when you start your session. This will set the overall context so Copilot always “remembers” it’s building the Automated Data Dictionary / Business Glossary project.
+
+
+---
+
+🔹 Master System Prompt for Copilot Agent
+
+You are my coding assistant.  
+We are building a Proof of Concept (POC) project called **Automated Data Dictionary / Business Glossary Generation**.  
+
+**Goal:**  
+Use NLP and a Large Language Model (LLM) to read technical column names (e.g., `CUST_ACCT_BAL_AMT`) and available documentation, then generate human-readable business definitions (e.g., “The total current balance of the customer’s primary checking account.”).  
+
+**Core requirements:**  
+1. Python-based project (`auto_data_dictionary`)  
+2. Modules:  
+   - `data_loader.py` → Load metadata (CSV/Excel with table + column names)  
+   - `nlp_utils.py` → Preprocess technical names (split, expand abbreviations, clean tokens)  
+   - `llm_generator.py` → Call OpenAI API to generate definitions  
+   - `generate_dictionary.py` → Orchestrator script: load → preprocess → generate → save results  
+   - `app.py` → Simple FastAPI endpoint to generate a definition from JSON input  
+3. Output:  
+   - CSV with [Table, Column, Suggested Definition]  
+   - REST API returning JSON with business definition  
+4. Dependencies: `openai`, `pandas`, `scikit-learn`, `fastapi`, `uvicorn`  
+5. Local development only (no cloud deployment needed).  
+
+**Important constraints:**  
+- Write clean, modular, and documented code.  
+- Keep each file small and focused.  
+- Assume we’ll test with a small sample CSV containing a few column names.  
+
+**Your job as Copilot Agent:**  
+- Follow my step-by-step instructions.  
+- Generate full code for each file or script when I ask.  
+- Suggest improvements if I miss something (e.g., error handling, config).
+
+
+---
+
+🔹 How to Use It
+
+1. Paste this into Copilot Agent at the start.
+
+
+2. Then continue with stepwise prompts like:
+
+“Create project scaffolding and requirements.txt”
+
+“Write data_loader.py to read metadata from CSV”
+
+“Now implement llm_generator.py with OpenAI API calls”
+
+
+
+
+Copilot will now always operate in the right POC scope.
+
+
+---
+
+Do you want me to also prepare a sample input CSV (with technical column names + mock documentation) so you can immediately test the pipeline Copilot builds?
+
+LLM pass (RAG preferred):
+
+Retrieve top-k relevant docs + sample values.
+
+Prompt the LLM with: column name, tokens, sample values, datatype, table name, retrieved doc snippets, and ask for:
+
+1. Suggested human-friendly column name
+
+
+2. Short business definition (1–2 sentences)
+
+
+3. Units (if any)
+
+
+4. Sensitivity / classification (PII / financial / public)
+
+
+5. Example values and edgecases
+
+
+6. Confidence and explanation (one-line justification)
+
+
+
+
+Keep both rule-based and LLM outputs so you can compare and ensemble.
+
+
+Example prompt skeleton:
+
+Column: CUST_ACCT_BAL_AMT
+Table: CUSTOMER_ACCOUNTS
+Type: NUMBER
+Sample values: [100.0, -15.25, 0.0]
+Retrieved docs: <short snippets>
+Task: Propose (1) human-friendly name, (2) concise business definition, (3) units, (4) sensitivity, (5) one-line justification.
+
+
+6. Automated validation & scoring
+
+Use deterministic checks:
+
+Does the generated definition mention the subject (customer/account) inferred from tokens?
+
+Does unit/type match sample data?
+
+Check for contradictions vs. existing glossary.
+
+
+Build a confidence score combining:
+
+Token-match score (how many expanded tokens are in the definition)
+
+Embedding similarity between generated definition and retrieved docs
+
+LLM self-assigned confidence or consistency across multiple model runs
+
+Rule-based match (1 if rule and LLM agree)
+
+
+Example simple formula:
+
+score = 0.4 * token_match + 0.4 * doc_similarity + 0.2 * agreement_with_rules
+
+
+
+7. Human-in-the-loop review & curation
+
+Present candidate(s) in a steward UI with:
+
+Generated name/definition, retrieved supporting docs, sample values, confidence score, change history.
+
+
+Provide quick actions: Accept, Edit & Approve, Reject, Flag for more info.
+
+Capture steward edits as labeled data to improve abbreviation maps, prompt templates, and for supervised fine-tuning later.
+
+
+
+8. Publish, version & integrate
+
+Once approved, write into the authoritative glossary/catalog (Amundsen/DataHub/Collibra/Alation or an internal DB).
+
+Store provenance metadata: generator version, prompt, retrieved docs, steward reviewer, timestamp, confidence.
+
+Support rollback/versioning and an audit trail.
+
+
+
+9. Monitoring, feedback loop & continuous improvement
+
+Track KPIs: % auto-accept, steward edit rates, time saved.
+
+Periodically retrain/finetune models or expand abbreviation maps with steward corrections.
+
+Re-run pipeline on schema changes or new tables.
+
+Data-quality checks: ensure glossary entries remain consistent with schema changes.
+
+
+
+
+Architecture (high level)
+
+Metadata crawler → staging metadata DB
+
+Doc indexer (PDFs, Confluence) → vector DB (FAISS/Weaviate/Pinecone)
+
+Enrichment services: tokenizer, abbreviation expander, sample-value analyzer
+
+Generator service: rule-based generator + RAG LLM (hosted or open-source LLM)
+
+Scoring & validator service
+
+Review UI for stewards (accept/edit/annotate)
+
+Authoritative glossary & API for other apps; audit & version store; scheduler (Airflow/K8s CronJobs)
+
+
+Sample glossary JSON (schema)
+
+{
+  "id": "glossary_123",
+  "table_name": "CUSTOMER_ACCOUNTS",
+  "column_name": "CUST_ACCT_BAL_AMT",
+  "suggested_name": "Customer Account Balance",
+  "definition": "The total current balance of the customer's primary account, expressed in the account currency. Includes pending transactions and overdrafts.",
+  "units": "USD (if known)",
+  "data_type": "NUMBER",
+  "sample_values": [100.0, -15.25, 0.0],
+  "sensitivity": "Financial",
+  "confidence_score": 0.87,
+  "provenance": {
+    "generator": "LLM-RAG-v1",
+    "docs": ["spec_customer_accounts.md#balance"],
+    "timestamp": "2025-09-19T12:00:00Z"
+  },
+  "status": "approved",
+  "steward": "jane.doe@company.com"
+}
+
+Example end-to-end for CUST_ACCT_BAL_AMT
+
+1. Tokenize & expand → customer account balance amount
+
+
+2. Samples: [100.0, -50.0, 0.0] → numeric, can be negative → balance likely includes debits/credits
+
+
+3. Retrieve docs: Customer Accounts spec (balance definition)
+
+
+4. LLM prompt → returns suggested name, definition, units, sensitivity
+
+
+5. Validator: doc similarity high, tokens present → confidence 0.92
+
+
+6. Steward UI: shows candidate + doc snippet + samples → steward clicks “Approve”
+
+
+7. Publish to glossary with provenance
+
+
+
+MVP roadmap (minimal safe deliverable, no timelines)
+
+Phase 1 (MVP features):
+
+Metadata crawler + sample extraction
+
+Tokenizer + abbreviation map
+
+Simple rule-based generator + template outputs
+
+Small LLM integration (prompt-only) without fine-tuning
+
+Steward UI to accept/edit entries
+
+
+Phase 2 (improvements):
+
+Add RAG: doc retrieval + vector DB
+
+Confidence scoring + automated publish for high-confidence entries
+
+Feedback capture, analytics dashboard
+
+
+Phase 3 (advanced):
+
+Fine-tune model on steward-approved examples
+
+Multi-language support, automated sensitivity detection, integration with enterprise governance tools
+
+
+
+Evaluation & acceptance criteria (suggested)
+
+Steward acceptance rate: target > X% for auto-publish (you set X)
+
+Quality metric: sample of N definitions manually rated for accuracy, completeness, clarity
+
+Time saved: steward time per entry vs manual baseline
+
+False-hallucination rate: definitions containing incorrect facts (aim for <5%)
+
+
+Risks & mitigations
+
+Hallucinations (LLM invents facts): mitigate with RAG + doc-provenance + steward approval required for low-confidence items.
+
+Ambiguous columns: surface sample values and context; mark as “needs steward”.
+
+Abbreviation drift / domain terms: let stewards add to abbreviation map and domain-specific glossaries.
+
+PII / compliance: automatically flag columns via pattern rules (SSN, PAN, email regex) and require stricter stewardship flow.
+
+Scaling & cost: run cheaper rule/RAG hybrid for high-volume, and reserve large LLM calls for ambiguous/important columns.
+
+
+Practical tips & heuristics
+
+Start with a small curated abbreviation map for your domain; it fixes many cases quickly.
+
+Use embedding similarity between definition and docs as a sanity check.
+
+Keep an explicit provenance field for every generated item — this builds trust with data stewards.
+
+Prioritize tables/columns that are most used (query logs) or BI-critical to maximize business ROI.
+
+Store steward edits as labeled training data for future fine-tuning.
+
+
+What I can send next (if you want)
+
+a) A ready-to-run prompt template tuned for finance/banking examples, with guardrails;
+
+b) A small Python snippet that tokenizes + expands names and scores matches; or
+
+c) A suggested UI wireframe for the steward review screen.
+
+
+Tell me which of (a), (b), or (c) you want and I’ll include it right away.
+
+Quick answer — what you’ll get
+
+Below are copy-pasteable, step-by-step prompts and a file-by-file plan you can paste into GitHub Copilot (or Copilot Chat) inside VS Code to spin up a local POC for the Automated Data Dictionary / Business Glossary project.
+Each step includes the exact comment/docstring prompt to put at the top of a new file so Copilot generates the implementation for you. I also include the repo layout, env commands, sample data, and how to run the POC.
+
+
+---
+
+Prerequisites
+
+Git, Python 3.10+ installed
+
+VS Code with the GitHub Copilot extension (or Copilot Chat)
+
+(Optional for generation) OpenAI API key set in OPENAI_API_KEY env var or a local LLM option
+
+This POC uses Python, Streamlit for a quick UI, Sentence-Transformers + FAISS for simple RAG embeddings, and OpenAI for the LLM step (fallback optional).
+
+
+Quick bootstrap commands (macOS / Linux example):
+
+git init data-dict-poc
+cd data-dict-poc
+python -m venv .venv
+source .venv/bin/activate
+
+Create requirements.txt and install:
+
+pandas
+sqlalchemy
+streamlit
+sentence-transformers
+faiss-cpu
+openai
+python-dotenv
+fastapi
+uvicorn
+python-multipart
+tqdm
+
+Then:
+
+pip install -r requirements.txt
+
+
+---
+
+Repo layout (POC)
+
+data-dict-poc/
+├─ README.md
+├─ requirements.txt
+├─ .env                # set OPENAI_API_KEY=...
+├─ sample_data/
+│  ├─ sample_columns.csv
+│  └─ docs/            # put short markdown/pdf docs here
+├─ abbreviation_map.json
+├─ metadata_crawler.py
+├─ tokenizer.py
+├─ doc_indexer.py
+├─ retriever.py
+├─ generator.py
+├─ scorer.py
+├─ orchestrator.py
+├─ ui_streamlit.py
+└─ suggestions_db.sqlite (created at runtime)
+
+
+---
+
+Step-by-step Copilot prompts (file by file)
+
+For each file: create the file in VS Code, paste the exact block below at the top, then accept Copilot’s completions / suggestions. If Copilot produces multiple suggestions, cycle until the result looks reasonable. These prompts are intentionally explicit — Copilot tends to produce better code when the intention is very clear.
+
+
+---
+
+1) metadata_crawler.py
+
+Paste this comment at top of metadata_crawler.py and let Copilot implement:
+
+"""
+# Copilot:
+Implement a metadata crawler module.
+
+Requirements:
+- Provide function `crawl_sqlite_schema(db_path: str, sample_limit: int = 100) -> list[dict]` which:
+  - Connects to a local SQLite DB using SQLAlchemy.
+  - For each table and column, returns a dict with:
+    {
+      "table_name": str,
+      "column_name": str,
+      "data_type": str,
+      "nullable": bool,
+      "column_default": Optional[str],
+      "column_comment": Optional[str],
+      "sample_values": list   # up to sample_limit values for that column (convert to Python types)
+    }
+- Provide function `load_from_csv(schema_csv: str) -> list[dict]` that reads a CSV with columns: table_name,column_name,data_type and returns same structure (sample_values empty).
+- Provide a simple CLI when run as __main__:
+  - args: --sqlite PATH or --csv PATH and --out metadata.json
+  - Writes metadata.json (pretty-printed).
+- Use type hints, docstrings, and basic error handling.
+"""
+
+
+---
+
+2) abbreviation_map.json
+
+Create abbreviation_map.json with this starter content (small domain map — Copilot can expand or you can edit):
+
+{
+  "cust": "customer",
+  "acct": "account",
+  "bal": "balance",
+  "amt": "amount",
+  "txn": "transaction",
+  "dt": "date",
+  "nbr": "number",
+  "id": "identifier",
+  "addr": "address",
+  "ssn": "ssn"
+}
+
+
+---
+
+3) tokenizer.py
+
+Paste this prompt at top of tokenizer.py:
+
+"""
+# Copilot:
+Implement tokenization and abbreviation expansion utilities.
+
+Requirements:
+- Function `tokenize_column_name(col_name: str) -> list[str]`
+  - Splits on underscores, dashes, camelCase, digits.
+  - Lowercases tokens and strips punctuation.
+- Function `expand_tokens(tokens: list[str], abbrev_map: dict) -> list[str]`
+  - Replaces abbreviations using abbrev_map (from abbreviation_map.json).
+- Function `pretty_name_from_tokens(tokens: list[str]) -> str`
+  - Joins and title-cases tokens into a human-friendly column name.
+- Include unit tests in module docstring examples.
+- Use type hints and docstrings.
+"""
+
+
+---
+
+4) doc_indexer.py (RAG indexer)
+
+Paste into doc_indexer.py:
+
+"""
+# Copilot:
+Implement a simple document indexer for RAG.
+
+Requirements:
+- Function `index_documents(doc_folder: str, index_path: str)`:
+  - Walk `doc_folder`, read .md and .txt files (ignore binary PDFs for POC).
+  - Split each document into short passages (200-300 tokens / ~200 chars).
+  - Use SentenceTransformer('all-MiniLM-L6-v2') to embed passages.
+  - Build a FAISS index (IndexFlatIP) and save it to disk at `index_path`.
+  - Save a small metadata mapping (json) mapping index id -> {doc_path, passage_text}.
+- Function `load_index(index_path: str)` that returns an object to query.
+- Keep code simple and robust for small doc collections.
+"""
+
+
+---
+
+5) retriever.py
+
+Paste into retriever.py:
+
+"""
+# Copilot:
+Implement a RAG retriever wrapper.
+
+Requirements:
+- Function `retrieve_similar_docs(query: str, index_path: str, k: int = 3) -> list[dict]`
+  - Loads the FAISS index + metadata and returns the top-k passages as
+    [{"doc_path": str, "passage": str, "score": float}, ...]
+- Use SentenceTransformer to encode `query`.
+- Provide type hints and docstrings.
+"""
+
+
+---
+
+6) generator.py (LLM + RAG prompt)
+
+Paste into generator.py:
+
+"""
+# Copilot:
+Implement a generator module that calls an LLM to produce a suggested human-friendly name and definition.
+
+Requirements:
+- Function `generate_definition_openai(item: dict, retrieved_docs: list[dict], openai_api_key: Optional[str]=None) -> dict`
+  - `item` is one metadata dict from metadata_crawler (table_name, column_name, data_type, sample_values, etc).
+  - `retrieved_docs` is a list of passages returned by retriever.
+  - If `openai_api_key` provided (or env var OPENAI_API_KEY), call OpenAI ChatCompletion (gpt-3.5-turbo or gpt-4 if available).
+  - The prompt must be a RAG-style prompt: include column name, table name, data type, sample values, and top-3 doc passages.
+  - **Strict output requirement**: Ask the model to return JSON ONLY with keys:
+    - suggested_name (str)
+    - definition (str, 1-2 sentences)
+    - units (str or null)
+    - sensitivity (one of: "PII", "Financial", "Public", "Internal", "Unknown")
+    - example_values (small list)
+    - confidence (0.0 - 1.0)
+    - explain (one-line justification of why this definition)
+    - insufficient_info (bool)
+  - If insufficient info, set `insufficient_info = true` and provide explain describing what is missing.
+  - Add a retry loop: call model up to 2 times if parsing fails.
+- Also implement a fallback `generate_definition_local(item, docs)` that returns a simple rule-based template using tokens (for offline testing).
+- Use python-dotenv to load API key from .env.
+- Use robust JSON parsing (avoid model text before JSON).
+"""
+
+Also include the exact LLM prompt template (inside code) — make it explicit, e.g.:
+
+SYSTEM: You are a concise, factual data glossary assistant. Use only provided evidence. If evidence is insufficient, set insufficient_info true.
+USER: Column: {column_name}
+Table: {table_name}
+Type: {data_type}
+Samples: {sample_values}
+Docs: {doc1}\n{doc2}\n{doc3}
+TASK: Return JSON only with keys: suggested_name, definition, units, sensitivity, example_values, confidence, explain, insufficient_info.
+
+Copilot will fill the implementation.
+
+
+---
+
+7) scorer.py
+
+Paste this into scorer.py:
+
+"""
+# Copilot:
+Implement a simple scoring module.
+
+Requirements:
+- Function `score_generated(item: dict, generated: dict, docs: list[dict]) -> float`
+  - Compute a confidence score [0-1] combining:
+    - token overlap between column tokens and generated.definition/name (0-1)
+    - embedding similarity between generated.definition and retrieved docs (0-1)
+    - binary match with rule-based fallback (0 or 1)
+  - Return score as float.
+- Provide helper functions as needed.
+"""
+
+
+---
+
+8) orchestrator.py
+
+Paste into orchestrator.py:
+
+"""
+# Copilot:
+Implement an orchestration script to run the end-to-end POC.
+
+Requirements:
+- CLI or main() that:
+  1. Loads metadata from metadata.json (generated by metadata_crawler) or a provided CSV.
+  2. For each column:
+     - Tokenize & expand using tokenizer.
+     - Retrieve docs with retriever.
+     - Call generator.generate_definition_openai (or fallback local).
+     - Score the result.
+  3. Save results to `suggestions.json` and also persist to a local SQLite DB `suggestions_db.sqlite` with provenance fields: generator, docs_snippet_refs, timestamp.
+- Option: --use-openai / --no-openai flags to toggle.
+- Provide logging and graceful error handling (skip and mark as insufficient).
+"""
+
+
+---
+
+9) ui_streamlit.py (steward review UI)
+
+Paste into ui_streamlit.py:
+
+"""
+# Copilot:
+Implement a Streamlit UI for a lightweight steward review workflow.
+
+Requirements:
+- Load suggestions from suggestions.json or SQLite DB.
+- Show a table / list of suggested entries with:
+  - table_name, column_name, suggested_name, definition, confidence
+  - expandable section to show sample_values and retrieved doc passages
+- Provide buttons for each suggestion:
+  - Accept (writes approved entry to authoritative_glossary.json / SQLite)
+  - Edit & Approve (allow inline edit of suggested_name and definition then approve)
+  - Reject (mark status rejected with note)
+- Persist steward actions and username input.
+- Provide a button "Run re-generate for selected rows" that calls orchestrator for those rows (for POC, call orchestrator.generate_definition_local).
+- Use Streamlit components only; keep UI simple and functional.
+"""
+
+
+---
+
+10) sample_data/sample_columns.csv
+
+Create a small CSV you can use for testing:
+
+table_name,column_name,data_type
+CUSTOMER_ACCOUNTS,CUST_ACCT_BAL_AMT,NUMBER
+CUSTOMER_ACCOUNTS,CUST_ID,INTEGER
+CUSTOMER_ACCOUNTS,ACCT_OPEN_DT,DATE
+TRANSACTIONS,TXN_AMT,NUMBER
+CUSTOMER,ADDR_LINE1,VARCHAR
+
+And create a small sample_data/docs/ with two markdown files:
+
+customer_accounts.md (contains a few lines about balance definition)
+
+transactions.md
+
+
+
+---
+
+Example LLM prompt to embed in generator (copy-ready)
+
+Inside generator.py please include this prompt template exactly (Copilot will put it in code):
+
+SYSTEM: You are a concise, factual data-glossary assistant. Only use the evidence provided below. If you cannot be confident, set "insufficient_info": true and explain what is missing. Return JSON only.
+
+USER:
+Column: {column_name}
+Table: {table_name}
+Type: {data_type}
+Sample values (up to 10): {sample_values}
+Retrieved document passages (top 3):
+1) {doc1}
+2) {doc2}
+3) {doc3}
+
+TASK: Using only the information above, return JSON with EXACT keys:
+{
+  "suggested_name": "Short title (Title Case)",
+  "definition": "Concise business definition (1-2 sentences).",
+  "units": null or "USD" or "percentage" etc,
+  "sensitivity": "PII" | "Financial" | "Public" | "Internal" | "Unknown",
+  "example_values": ["ex1", "ex2"],
+  "confidence": 0.0,
+  "explain": "One-line justification linking tokens/evidence.",
+  "insufficient_info": false
+}
+
+Do NOT add any extra text, commentary, or YAML. If you must add additional notes, include them under "explain".
+
+
+---
+
+Run the POC — quick checklist
+
+1. Create files and paste the prompts above and accept Copilot completions.
+
+
+2. Populate .env with OPENAI_API_KEY=sk-... (optional if you want to use OpenAI).
+
+
+3. Index docs:
+
+python -c "from doc_indexer import index_documents; index_documents('sample_data/docs', 'faiss_index')"
+
+
+4. Crawl metadata (for POC use CSV):
+
+python -c "from metadata_crawler import load_from_csv; import json; print('writing metadata.json'); json.dump(load_from_csv('sample_data/sample_columns.csv'), open('metadata.json','w'), indent=2)"
+
+
+5. Run orchestrator:
+
+python orchestrator.py --metadata metadata.json --use-openai
+
+
+6. Start UI:
+
+streamlit run ui_streamlit.py
+
+
+7. Approve/Reject/edit entries in the UI. Approved entries are saved to authoritative_glossary.json or DB.
+
+
+
+
+---
+
+Extra tips & guardrails for Copilot replies
+
+If Copilot hallucinated, edit function docstring with extra constraints and re-run completion.
+
+For the OpenAI call, always ask the model to RETURN JSON ONLY. Validate JSON with json.loads and fallback to retry/parsing.
+
+Save steward edits as training data — collect into train_examples.jsonl for future fine-tuning.
+
+Start with the OpenAI option for speed; if you want to remove external dependency later, swap generator.generate_definition_openai to call a local LLM wrapper (transformers) and reuse the same JSON output format.
+
+
+
+---
+
+Minimal example expected output (one item)
+
+{
+  "table_name": "CUSTOMER_ACCOUNTS",
+  "column_name": "CUST_ACCT_BAL_AMT",
+  "suggested_name": "Customer Account Balance",
+  "definition": "The total current balance of the customer's account, including pending transactions and overdrafts.",
+  "units": "USD",
+  "sensitivity": "Financial",
+  "example_values": [100.0, -15.25, 0.0],
+  "confidence": 0.92,
+  "explain": "Tokens customer/account/balance + doc match: 'balance includes pending'.",
+  "insufficient_info": false
+}
+
+
+---
+
+If you want, I can now:
+
+(A) Generate the exact README.md and orchestrator.py code text you can paste (so you don’t rely on Copilot), or
+
+(B) Produce a single-file runnable POC (one Python script + small docs and CSV) that runs without OpenAI (rule-based + embeddings only).
+
+
+Which do you want me to produce next?
+
+Yes ✅ — the same step-by-step approach I gave you works with GitHub Copilot in Agent Mode, but there are a few tweaks you should keep in mind:
+
+
+---
+
+🔑 What changes when you use Agent Mode?
+
+1. Natural language workflows
+
+Instead of pasting docstrings at the top of each file, you can just chat with Copilot Agent like:
+
+> “Create a Python file called tokenizer.py that implements column name tokenization and abbreviation expansion as described earlier.”
+
+
+
+Agent Mode will generate the file directly in your repo.
+
+
+
+2. Multi-file orchestration
+
+You can ask Copilot Agent to create multiple files in one go by describing the repo structure:
+
+> “Generate a Python project with the following files: metadata_crawler.py, tokenizer.py, doc_indexer.py, etc. Use the requirements list I provide. Each file should follow the responsibilities I’ll outline.”
+
+
+
+
+
+3. Iterative refinement
+
+In Agent Mode you can run:
+
+> “Open generator.py and add a retry loop if JSON parsing fails.”
+
+
+
+This makes edits much faster than re-prompting per file.
+
+
+
+4. Running and testing inside VS Code
+
+Agent Mode can help you execute commands:
+
+> “Run python orchestrator.py --metadata metadata.json --no-openai and show me the logs.”
+
+
+
+It can even fix runtime errors interactively.
+
+
+
+
+
+---
+
+⚙️ How to adapt my prompts for Agent Mode
+
+Instead of pasting long docstrings, turn them into tasks for the agent.
+Example conversion:
+
+
+Classic Copilot (docstring prompt in file):
+
+"""
+Implement tokenization utilities:
+- tokenize_column_name
+- expand_tokens
+- pretty_name_from_tokens
+"""
+
+Agent Mode:
+
+@workspace 
+Create a new file `tokenizer.py`.  
+Implement:
+- tokenize_column_name(col_name: str) -> list[str]
+- expand_tokens(tokens: list[str], abbrev_map: dict) -> list[str]
+- pretty_name_from_tokens(tokens: list[str]) -> str
+Add type hints, docstrings, and one example test case.
+
+
+---
+
+🛠️ Suggested workflow in Agent Mode
+
+1. Setup project skeleton
+
+@workspace 
+Create a new folder `data-dict-poc`. Inside it add:
+- requirements.txt with the libraries: pandas, sqlalchemy, streamlit, sentence-transformers, faiss-cpu, openai, python-dotenv, fastapi, uvicorn, tqdm
+- .env (empty for now)
+- abbreviation_map.json with common abbreviations (cust=customer, acct=account, etc.)
+
+
+2. Generate core modules
+Ask Agent Mode to generate each module one by one (metadata_crawler, tokenizer, doc_indexer, retriever, generator, scorer, orchestrator).
+Use the task format I gave above.
+
+
+3. Add sample data
+
+@workspace
+Add a new folder `sample_data` with:
+- sample_columns.csv containing a few columns (CUST_ACCT_BAL_AMT, etc.)
+- docs/ with one or two markdown files explaining customer accounts and transactions.
+
+
+4. Run & debug
+
+@terminal
+python orchestrator.py --metadata sample_data/sample_columns.csv --no-openai
+
+If errors occur, you can literally tell the agent:
+
+> “Fix the bug in orchestrator.py — it says ‘NameError: load_from_csv not found’.”
+
+
+
+
+5. UI for steward review
+
+@workspace
+Create `ui_streamlit.py` that loads suggestions.json, shows them in a table, and allows Accept/Edit/Reject with persistence.
+
+
+
+
+---
+
+✅ Recommendation
+
+If you want hands-on control (teaching Copilot step by step), use the docstring approach.
+
+If you want faster repo bootstrap, Agent Mode is better — just feed it the repo structure + requirements and let it scaffold the whole thing.
+
+
+
+---
+
+👉 Do you want me to rewrite all the file-by-file prompts into compact Agent Mode tasks (so you can copy them directly into Copilot Agent chat), instead of the docstring-style ones I gave before?
+
